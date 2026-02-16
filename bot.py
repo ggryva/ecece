@@ -106,7 +106,7 @@ class JockieMusic(commands.Bot):
     
     # Event: Node disconnected - wavelink 2.x
     @commands.Cog.listener()
-    async def on_wavelink_node_disconnected(self, node: wavelink.Node):
+    async def on_wavelink_track_end(player: wavelink.Player, track: wavelink.Playable, str):
         logger.warning(f"⚠️ Node disconnected: {node.identifier}")
         self.lavalink_connected = False
         await asyncio.sleep(5)
@@ -153,4 +153,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
