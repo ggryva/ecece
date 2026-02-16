@@ -7,6 +7,8 @@ import discord
 import wavelink
 from discord.ext import commands, tasks
 from wavelink import Node
+import wavelink
+print(f"Wavelink version: {wavelink.__version__}")
 
 # Setup logging yang benar
 logging.basicConfig(
@@ -186,3 +188,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
