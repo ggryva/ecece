@@ -1,127 +1,161 @@
+import asyncio
+import logging
+
 import discord
-from discord.ext import commands
 import wavelink
-from config import Config
+from discord.ext import commands
+from wavelink import Pool, Playable, Player
+
+logger = logging.getLogger("JockieMusic")
 
 class Music(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.config = Config()
+    
+    async def ensure_voice(self, ctx: commands.Context) -> bool:
+        """Ensure user dan bot ada di voice channel dengan proper node checking"""
         
-    async def ensure_voice(self, ctx):
+        # Cek apakah user di voice channel
         if not ctx.author.voice:
-            await ctx.send("❌ Join VC dulu!")
+            await ctx.send("❌ Kamu harus join voice channel dulu!")
             return False
-        if not ctx.voice_client:
+        
+        # Cek Lavalink connection dengan retry
+        node = None
+        max_retries = 3
+        
+        for attempt in range(max_retries):
+            try:
+                node = Pool.get_node()
+                if node and node.status == wavelink.NodeStatus.CONNECTED:
+                    break
+                else:
+                    logger.warning(f"Node tidak tersedia, attempt {attempt + 1}/{max_retries}")
+                    await asyncio.sleep(2)
+            except Exception as e:
+                logger.error(f"Error getting node: {e}")
+                await asyncio.sleep(2)
+        
+        if not node or node.status != wavelink.NodeStatus.CONNECTED:
+            await ctx.send("❌ Lavalink tidak terhubung. Coba lagi nanti.")
+            # Trigger reconnect
+            if hasattr(self.bot, 'setup_lavalink'):
+                asyncio.create_task(self.bot.setup_lavalink())
+            return False
+        
+        # Cek apakah bot sudah di voice channel lain
+        if ctx.voice_client:
+            if ctx.voice_client.channel != ctx.author.voice.channel:
+                await ctx.send("❌ Aku sudah di channel lain!")
+                return False
+            return True
+        
+        # Connect ke voice channel
+        try:
             vc = await ctx.author.voice.channel.connect(cls=wavelink.Player)
-            vc.autoplay = wavelink.AutoPlayMode.partial
-        return True
+            logger.info(f"Connected to voice channel: {ctx.author.voice.channel.name}")
+            return True
+        except Exception as e:
+            logger.error(f"Gagal connect ke voice: {e}")
+            await ctx.send(f"❌ Gagal join voice channel: {str(e)}")
+            return False
+    
+    @commands.command(name="play", aliases=["p"])
+    async def play(self, ctx: commands.Context, *, query: str):
+        """Play music dengan proper error handling"""
         
-    @commands.command(name='play', aliases=['p'])
-    async def play(self, ctx, *, query: str = None):
-        
-        if not query:
-            return await ctx.send("❌ Masukkan judul lagu atau link!")
-            
+        # Ensure voice connection
         if not await self.ensure_voice(ctx):
             return
-            
-        player = ctx.voice_client
-        msg = await ctx.send("🔍 Mencari...")
+        
+        vc: Player = ctx.voice_client
+        
+        # Cek node lagi sebelum play
+        if not vc.node or vc.node.status != wavelink.NodeStatus.CONNECTED:
+            await ctx.send("❌ Node tidak tersedia. Reconnecting...")
+            return
         
         try:
+            # Search track
             tracks = await wavelink.Playable.search(query)
+            
             if not tracks:
-                return await msg.edit(content="❌ Tidak ditemukan!")
-                
-            track = tracks[0]
+                await ctx.send(f"❌ Tidak menemukan: `{query}`")
+                return
             
-            if player.playing:
-                player.queue.put(track)
-                await msg.edit(content=f"✅ Ditambahkan: **{track.title}**")
+            # Play track
+            if isinstance(tracks, wavelink.Playlist):
+                # Jika playlist
+                for track in tracks.tracks[:50]:  # Limit 50 tracks
+                    await vc.queue.put_wait(track)
+                await ctx.send(f"🎵 Menambahkan playlist **{tracks.name}** ({len(tracks.tracks)} lagu)")
             else:
-                await player.play(track)
-                embed = discord.Embed(
-                    title="▶️ Memutar",
-                    description=f"[{track.title}]({track.uri})",
-                    color=self.config.EMBED_COLOR
-                )
-                embed.set_thumbnail(url=track.artwork or "")
-                await msg.edit(content=None, embed=embed)
+                # Single track
+                track = tracks[0]
+                await vc.queue.put_wait(track)
+                await ctx.send(f"🎵 Menambahkan: **{track.title}** - {track.author}")
+            
+            # Start playing jika belum play
+            if not vc.playing:
+                await vc.play(vc.queue.get())
+                
+        except wavelink.LavalinkException as e:
+            logger.error(f"Lavalink error: {e}")
+            await ctx.send(f"❌ Error Lavalink: {str(e)}")
         except Exception as e:
-            await msg.edit(content=f"❌ Error: {e}")
-            
-    @commands.command(name='pause')
-    async def pause(self, ctx):
-        player = ctx.voice_client
-        if not player or not player.playing:
-            return await ctx.send("❌ Tidak ada musik!")
-        await player.pause(True)
-        await ctx.send("⏸️ Dijeda")
+            logger.error(f"Unexpected error di play: {e}")
+            await ctx.send(f"❌ Error: {str(e)}")
+    
+    @commands.command(name="stop", aliases=["leave", "disconnect"])
+    async def stop(self, ctx: commands.Context):
+        """Stop dan disconnect"""
+        if not ctx.voice_client:
+            await ctx.send("❌ Aku tidak di voice channel!")
+            return
         
-    @commands.command(name='resume')
-    async def resume(self, ctx):
-        player = ctx.voice_client
-        if not player or not player.paused:
-            return await ctx.send("❌ Tidak dijeda!")
-        await player.pause(False)
-        await ctx.send("▶️ Dilanjutkan")
+        vc: Player = ctx.voice_client
+        await vc.disconnect()
+        await ctx.send("👋 Sampai jumpa!")
+    
+    @commands.command(name="skip", aliases=["s"])
+    async def skip(self, ctx: commands.Context):
+        """Skip current track"""
+        if not ctx.voice_client:
+            await ctx.send("❌ Tidak ada yang diputar!")
+            return
         
-    @commands.command(name='skip', aliases=['s'])
-    async def skip(self, ctx):
-        player = ctx.voice_client
-        if not player or not player.playing:
-            return await ctx.send("❌ Tidak ada musik!")
-        await player.skip()
-        await ctx.send("⏭️ Dilewati")
+        vc: Player = ctx.voice_client
         
-    @commands.command(name='stop')
-    async def stop(self, ctx):
-        player = ctx.voice_client
-        if not player or not player.playing:
-            return await ctx.send("❌ Tidak ada musik!")
-        player.queue.clear()
-        await player.stop()
-        await ctx.send("⏹️ Dihentikan")
+        if not vc.playing:
+            await ctx.send("❌ Tidak ada yang diputar!")
+            return
         
-    @commands.command(name='nowplaying', aliases=['np'])
-    async def now_playing(self, ctx):
-        player = ctx.voice_client
-        if not player or not player.current:
-            return await ctx.send("❌ Tidak ada musik!")
-            
-        track = player.current
-        embed = discord.Embed(
-            title="🎵 Now Playing",
-            description=f"[{track.title}]({track.uri})",
-            color=self.config.EMBED_COLOR
-        )
-        embed.add_field(name="Channel", value=track.author)
-        embed.add_field(name="Volume", value=f"{player.volume}%")
-        embed.set_thumbnail(url=track.artwork or "")
-        await ctx.send(embed=embed)
+        await vc.skip()
+        await ctx.send("⏭️ Skip!")
+    
+    @commands.Cog.listener()
+    async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
+        """Auto play next track dari queue"""
+        if not payload.player:
+            return
         
-    @commands.command(name='volume', aliases=['vol'])
-    async def volume(self, ctx, vol: int = None):
-        player = ctx.voice_client
-        if not player:
-            return await ctx.send("❌ Tidak di VC!")
-        if vol is None:
-            return await ctx.send(f"🔊 Volume: {player.volume}%")
-        if not 0 <= vol <= 200:
-            return await ctx.send("❌ 0-200!")
-        await player.set_volume(vol)
-        await ctx.send(f"🔊 Volume: {vol}%")
+        vc: Player = payload.player
         
-    @commands.command(name='disconnect', aliases=['dc'])
-    async def disconnect(self, ctx):
-        player = ctx.voice_client
-        if not player:
-            return await ctx.send("❌ Tidak di VC!")
-        await player.disconnect()
-        await ctx.send("👋 Bye!")
+        # Play next track jika ada di queue
+        if not vc.queue.is_empty:
+            next_track = vc.queue.get()
+            await vc.play(next_track)
+            # Optional: Send message ke channel
+            # if vc.channel:
+            #     await vc.channel.send(f"🎵 Now playing: **{next_track.title}**")
+    
+    @commands.Cog.listener()
+    async def on_wavelink_track_exception(self, payload: wavelink.TrackExceptionEventPayload):
+        """Handle track errors"""
+        logger.error(f"Track exception: {payload.exception}")
+        if payload.player and not payload.player.queue.is_empty:
+            await payload.player.skip()
 
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(Music(bot))
-
-
+    logger.info("Music cog loaded!")
