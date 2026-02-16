@@ -30,7 +30,7 @@ class JockieMusic(commands.Bot):
         
         # Wavelink v3 syntax
         node = wavelink.Node(
-            uri=f'http://{self.config.LAVALINK_HOST}:{self.config.LAVALINK_PORT}',
+            uri=f'https://{self.config.LAVALINK_HOST}:{self.config.LAVALINK_PORT}',
             password=self.config.LAVALINK_PASSWORD
         )
         
@@ -87,4 +87,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
