@@ -6,7 +6,7 @@ from datetime import datetime
 import discord
 import wavelink
 from discord.ext import commands, tasks
-from wavelink import Node, Pool
+from wavelink import Node
 
 # Setup logging yang benar
 logging.basicConfig(
@@ -44,7 +44,7 @@ class JockieMusic(commands.Bot):
     async def setup_lavalink(self):
         """Setup Lavalink dengan proper error handling dan retry"""
         try:
-            # Konfigurasi node
+            # Konfigurasi node - wavelink 3.x syntax
             node = Node(
                 uri=os.getenv("LAVALINK_URI", "https://lavalink-3-production-94ee.up.railway.app:443"),
                 password=os.getenv("LAVALINK_PASSWORD", "your-password"),
@@ -53,22 +53,20 @@ class JockieMusic(commands.Bot):
             
             logger.info("Menghubungkan ke Lavalink...")
             
-            # Connect dengan timeout
-            await asyncio.wait_for(
-                Pool.connect(nodes=[node], client=self),
-                timeout=30.0
-            )
+            # Connect dengan timeout - wavelink 3.x syntax
+            await wavelink.Pool.connect(nodes=[node], client=self)
             
             # Verifikasi koneksi benar-benar berhasil
             await asyncio.sleep(2)  # Tunggu handshake selesai
-            connected_node = Pool.get_node()
             
-            if connected_node and connected_node.status == wavelink.NodeStatus.CONNECTED:
+            # Cek node yang tersedia
+            nodes = wavelink.Pool.nodes
+            if nodes:
                 self.lavalink_connected = True
                 self.node_reconnect_attempts = 0
-                logger.info(f"✅ Terhubung ke Lavalink! Node: {connected_node.identifier}")
+                logger.info(f"✅ Terhubung ke Lavalink! Nodes: {len(nodes)}")
             else:
-                raise wavelink.InvalidNodeException("Node tidak dalam state CONNECTED")
+                raise Exception("No nodes available after connection")
                 
         except asyncio.TimeoutError:
             logger.error("❌ Timeout saat menghubungkan ke Lavalink")
@@ -100,14 +98,14 @@ class JockieMusic(commands.Bot):
             return
             
         try:
-            node = Pool.get_node()
-            if not node or node.status != wavelink.NodeStatus.CONNECTED:
-                logger.warning("Node tidak dalam state CONNECTED, reconnecting...")
+            # Cek node yang tersedia
+            nodes = wavelink.Pool.nodes
+            if not nodes:
+                logger.warning("Tidak ada nodes tersedia, reconnecting...")
                 self.lavalink_connected = False
                 await self.setup_lavalink()
             else:
-                # Ping untuk keep alive
-                logger.debug(f"Keep-alive check: Node {node.identifier} status: {node.status}")
+                logger.debug(f"Keep-alive check: {len(nodes)} nodes available")
         except Exception as e:
             logger.error(f"Error dalam keepalive: {e}")
             self.lavalink_connected = False
@@ -116,6 +114,8 @@ class JockieMusic(commands.Bot):
     async def before_keepalive(self):
         await self.wait_until_ready()
     
+    # Event listeners untuk wavelink 3.x
+    @commands.Cog.listener()
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
         """Event handler saat node ready"""
         logger.info(f"🎵 Node Ready: {payload.node.identifier}")
@@ -124,10 +124,12 @@ class JockieMusic(commands.Bot):
         self.lavalink_connected = True
         self.node_reconnect_attempts = 0
     
-    async def on_wavelink_node_disconnected(self, payload: wavelink.NodeDisconnectedEventPayload):
-        """Event handler saat node disconnect"""
+    # PERBAIKAN: Gunakan event yang benar untuk wavelink 3.x
+    @commands.Cog.listener()
+    async def on_wavelink_node_disconnected(self, payload: wavelink.NodeDisconnectedPayload):
+        """Event handler saat node disconnect - wavelink 3.x"""
         logger.warning(f"⚠️ Node Disconnected: {payload.node.identifier}")
-        logger.warning(f"   - Reason: {payload.reason}")
+        logger.warning(f"   - Reason: {getattr(payload, 'reason', 'Unknown')}")
         self.lavalink_connected = False
         
         # Trigger reconnect
@@ -144,7 +146,7 @@ class JockieMusic(commands.Bot):
         
         # Disconnect dari Lavalink
         try:
-            await Pool.close()
+            await wavelink.Pool.close()
             logger.info("✅ Lavalink pool ditutup")
         except Exception as e:
             logger.error(f"Error menutup pool: {e}")
