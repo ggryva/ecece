@@ -42,12 +42,16 @@ class JockieMusic(commands.Bot):
             logger.error(f"Gagal konek: {e}")
             raise
 
+        await self.load_extension('cogs.music')
+        await self.load_extension('cogs.admin')
+        await self.load_extension('cogs.queue')
+
     async def on_ready(self):
         logger.info(f'{self.user} online!')
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
-                name=f"{self.config.PREFIX}help | Railway"
+                name=f"{self.config.PREFIX}help | GreyOnly"
             )
         )
 
@@ -88,6 +92,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
