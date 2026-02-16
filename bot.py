@@ -30,10 +30,10 @@ class JockieMusic(commands.Bot):
         retries = 10
         while not connected and retries > 0:
             try:
+                # ✅ FIX: Hapus 'secure', gunakan 'https://' di URI untuk SSL
                 node = wavelink.Node(
                     uri=f'http://{self.config.LAVALINK_HOST}:{self.config.LAVALINK_PORT}',
-                    password=self.config.LAVALINK_PASSWORD,
-                    secure=True
+                    password=self.config.LAVALINK_PASSWORD
                 )
                 await wavelink.Pool.connect(client=self, nodes=[node])
                 connected = True
@@ -58,9 +58,6 @@ class JockieMusic(commands.Bot):
                 name=f"{self.config.PREFIX}help | Railway"
             )
         )
-        
-    async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
-        logger.info(f'Lavalink ready: {payload.node.uri}')
 
 async def start_web_server(bot):
     """Health check server"""
@@ -89,17 +86,14 @@ async def main_async():
         )
         embed.add_field(name="Musik", value="`play` `pause` `resume` `skip` `stop` `np` `volume`", inline=False)
         embed.add_field(name="Antrian", value="`queue` `shuffle` `loop` `clear`", inline=False)
-        embed.add_field(name="Info", value="`stats` `disconnect`", inline=False)
         await ctx.send(embed=embed)
     
-    # Jalankan web server dan bot secara parallel
     await asyncio.gather(
         start_web_server(bot),
         bot.start(bot.config.TOKEN)
     )
 
 def main():
-    """Entry point"""
     asyncio.run(main_async())
 
 if __name__ == "__main__":
