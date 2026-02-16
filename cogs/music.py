@@ -67,7 +67,7 @@ class Music(commands.Cog):
         
         try:
             # Search - wavelink 2.x syntax
-            tracks = await wavelink.YouTubeTrack.search(query)
+            tracks = await wavelink.Playable.search(query)
             
             if not tracks:
                 await ctx.send(f"❌ Tidak menemukan: `{query}`")
@@ -134,7 +134,7 @@ class Music(commands.Cog):
     
     # Events - wavelink 2.x
     @commands.Cog.listener()
-    async def on_wavelink_track_end(self, player: wavelink.Player, track: wavelink.YouTubeTrack, reason: str):
+    async def on_wavelink_track_end(self, player: wavelink.Player, track: wavelink.Playable, reason: str):
         """Auto play next"""
         if not player.queue.is_empty:
             try:
@@ -145,7 +145,7 @@ class Music(commands.Cog):
                 logger.error(f"Auto-play error: {e}")
     
     @commands.Cog.listener()
-    async def on_wavelink_track_exception(self, player: wavelink.Player, track: wavelink.YouTubeTrack, error: Exception):
+    async def on_wavelink_track_exception(self, player: wavelink.Player, track: wavelink.Playable, error: Exception):
         """Handle track error"""
         logger.error(f"Track exception: {error}")
         if not player.queue.is_empty:
