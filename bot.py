@@ -45,7 +45,7 @@ class JockieMusic(commands.Bot):
         """Setup Lavalink dengan wavelink 2.x"""
         try:
             # Buat node - wavelink 2.x syntax
-            node = await wavelink.NodePool.create_node(
+            node = await wavelink.Node.create_node(
                 bot=self,
                 host="lavalink-3-production-94ee.up.railway.app",
                 port=443,
@@ -54,6 +54,7 @@ class JockieMusic(commands.Bot):
                 spotify_client_id=os.getenv("SPOTIFY_CLIENT_ID"),
                 spotify_client_secret=os.getenv("SPOTIFY_CLIENT_SECRET")
             )
+            await wavelink.Pool.connect(client=bot, nodes=[node])
             
             logger.info(f"✅ Terhubung ke Lavalink! Node: {node.identifier}")
             self.lavalink_connected = True
@@ -152,3 +153,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
