@@ -84,7 +84,7 @@ class JockieMusic(commands.Bot):
             return
             
         try:
-            node = wavelink.NodePool.get_node()
+            node = wavelink.Node.get_node()
             if not node or not node.is_connected:
                 logger.warning("Node disconnected, reconnecting...")
                 self.lavalink_connected = False
@@ -121,7 +121,7 @@ class JockieMusic(commands.Bot):
                 await vc.disconnect()
             except:
                 pass
-        await wavelink.NodePool.disconnect()
+        await wavelink.Node.disconnect()
         await super().close()
 
 # Health check server
@@ -152,6 +152,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-
