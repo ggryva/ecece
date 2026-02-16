@@ -16,10 +16,11 @@ class Config:
     }
     
     # ✅ FIX 2: Konfigurasi Lavalink yang benar
-    LAVALINK_HOST = os.getenv('LAVALINK_HOST', 'lavalink.dev')
-    LAVALINK_PORT = int(os.getenv('LAVALINK_PORT', 443))
-    LAVALINK_PASSWORD = os.getenv('LAVALINK_PASSWORD', 'https://lavalink.dev')
+    LAVALINK_HOST = os.getenv('LAVALINK_HOST', 'lava.link')
+    LAVALINK_PORT = int(os.getenv('LAVALINK_PORT', 80))
+    LAVALINK_PASSWORD = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
     
     PORT = int(os.getenv('PORT', 8080))
     MAX_VOLUME = 200
     DEFAULT_VOLUME = 100
+
