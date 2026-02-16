@@ -15,10 +15,11 @@ class Config:
         'music': '🎵', 'error': '❌', 'success': '✅'
     }
     
-    LAVALINK_HOST = os.getenv('LAVALINK_HOST', 'localhost')
+    LAVALINK_HOST = os.getenv('LAVALINK_HOST', 'lavalink.dev')
     LAVALINK_PORT = int(os.getenv('LAVALINK_PORT', 2333))
-    LAVALINK_PASSWORD = os.getenv('LAVALINK_PASSWORD', 'youshallnotpass')
+    LAVALINK_PASSWORD = os.getenv('LAVALINK_PASSWORD', 'https://lavalink.dev')
     PORT = int(os.getenv('PORT', 3000))
     
     MAX_VOLUME = 200
     DEFAULT_VOLUME = 100
+
