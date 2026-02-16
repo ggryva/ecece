@@ -32,8 +32,8 @@ class JockieMusic(commands.Bot):
             try:
                 # ✅ FIX: Hapus 'secure', gunakan 'https://' di URI untuk SSL
                 node = wavelink.Node(
-                    uri=f'http://{self.config.LAVALINK_HOST}:{self.config.LAVALINK_PORT}',
-                    password=self.config.LAVALINK_PASSWORD
+                    uri=f'http://{self.config.lavalink.dev}:{self.config.443}',
+                    password=self.config.https://lavalink.dev
                 )
                 await wavelink.Pool.connect(client=self, nodes=[node])
                 connected = True
@@ -98,3 +98,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
