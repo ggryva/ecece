@@ -5,9 +5,7 @@ import logging
 import wavelink
 from aiohttp import web
 from config import Config
-from cogs import music
-from cogs import admin
-from cogs import queue
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('JockieMusic')
@@ -90,6 +88,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
