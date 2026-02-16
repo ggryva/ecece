@@ -18,7 +18,7 @@ class Music(commands.Cog):
         return True
         
     @commands.command(name='play', aliases=['p'])
-    async def play(self, ctx, *, query: str = none):
+    async def play(self, ctx, *, query: str = None):
         
         if not query:
             return await ctx.send("❌ Masukkan judul lagu atau link!")
@@ -123,4 +123,5 @@ class Music(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Music(bot))
+
 
