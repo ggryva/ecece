@@ -5,7 +5,7 @@ load_dotenv()
 
 class Config:
     TOKEN = os.getenv('DISCORD_TOKEN')
-    PREFIX = os.getenv('BOT_PREFIX', '!')
+    PREFIX = os.getenv('BOT_PREFIX', 'g!')
     EMBED_COLOR = 0x3498db
     
     EMOJIS = {
@@ -23,6 +23,7 @@ class Config:
     PORT = int(os.getenv('PORT', 8080))
     MAX_VOLUME = 200
     DEFAULT_VOLUME = 100
+
 
 
 
