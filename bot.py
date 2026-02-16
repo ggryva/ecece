@@ -47,8 +47,7 @@ class JockieMusic(commands.Bot):
             # Buat node - wavelink 2.x syntax
             node = await wavelink.Node.create_node(
                 bot=self,
-                host="lavalink-3-production-94ee.up.railway.app",
-                port=443,
+                host="https://lavalink-3-production-94ee.up.railway.app:443",
                 password=os.getenv("LAVALINK_PASSWORD", "your-password"),
                 https=True,  # WSS untuk port 443
                 spotify_client_id=os.getenv("SPOTIFY_CLIENT_ID"),
@@ -153,5 +152,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 
