@@ -11,11 +11,10 @@ logger = logging.getLogger('JockieMusic')
 
 class JockieMusic(commands.Bot):
     def __init__(self):
-        # ✅ FIX: Intents harus di-enable di Developer Portal!
         intents = discord.Intents.default()
-        intents.message_content = True  # Privileged Intent
-        intents.members = True          # Privileged Intent  
-        intents.presences = True        # Privileged Intent
+        intents.message_content = True
+        intents.members = True
+        intents.presences = True
         intents.voice_states = True
         
         super().__init__(
@@ -29,7 +28,7 @@ class JockieMusic(commands.Bot):
     async def setup_hook(self):
         logger.info("Menghubungkan ke Lavalink...")
         
-        # ✅ FIX: Wavelink v4 syntax
+        # Wavelink v3 syntax
         node = wavelink.Node(
             uri=f'https://{self.config.LAVALINK_HOST}:{self.config.LAVALINK_PORT}',
             password=self.config.LAVALINK_PASSWORD
@@ -37,22 +36,19 @@ class JockieMusic(commands.Bot):
         
         try:
             await wavelink.Pool.connect(client=self, nodes=[node])
-            logger.info("✅ Terhubung ke Lavalink!")
+            logger.info("Terhubung ke Lavalink!")
         except Exception as e:
-            logger.error(f"❌ Gagal konek: {e}")
+            logger.error(f"Gagal konek: {e}")
             raise
 
     async def on_ready(self):
-        logger.info(f'🚀 {self.user} online!')
+        logger.info(f'{self.user} online!')
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
                 name=f"{self.config.PREFIX}help | Railway"
             )
         )
-
-    async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
-        logger.info(f'🎵 Lavalink ready: {payload.node.uri}')
 
 async def start_web_server(bot):
     async def health(request):
@@ -64,7 +60,7 @@ async def start_web_server(bot):
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', bot.config.PORT)
     await site.start()
-    logger.info(f"🌐 Health check: port {bot.config.PORT}")
+    logger.info(f"Health check: port {bot.config.PORT}")
 
 async def main_async():
     bot = JockieMusic()
@@ -77,8 +73,8 @@ async def main_async():
             description=f"Prefix: `{bot.config.PREFIX}`",
             color=bot.config.EMBED_COLOR
         )
-        embed.add_field(name="🎵 Musik", value="`play` `pause` `resume` `skip` `stop` `np` `volume`", inline=False)
-        embed.add_field(name="📋 Antrian", value="`queue` `shuffle` `loop` `clear`", inline=False)
+        embed.add_field(name="Musik", value="`play` `pause` `resume` `skip` `stop` `np` `volume`", inline=False)
+        embed.add_field(name="Antrian", value="`queue` `shuffle` `loop` `clear`", inline=False)
         await ctx.send(embed=embed)
     
     await asyncio.gather(
