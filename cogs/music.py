@@ -67,7 +67,7 @@ class Music(commands.Cog):
         
         try:
             # Search - wavelink 2.x syntax
-            tracks = await wavelink.Playable.search(query)
+            tracks = await wavelink.Pool.fetch.tracks(query)
             
             if not tracks:
                 await ctx.send(f"❌ Tidak menemukan: `{query}`")
@@ -157,3 +157,4 @@ class Music(commands.Cog):
 async def setup(bot: commands.Bot):
     await bot.add_cog(Music(bot))
     logger.info("Music cog loaded!")
+
