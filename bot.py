@@ -11,8 +11,11 @@ logger = logging.getLogger('JockieMusic')
 
 class JockieMusic(commands.Bot):
     def __init__(self):
+        # ✅ FIX: Intents harus di-enable di Developer Portal!
         intents = discord.Intents.default()
-        intents.message_content = True
+        intents.message_content = True  # Privileged Intent
+        intents.members = True          # Privileged Intent  
+        intents.presences = True        # Privileged Intent
         intents.voice_states = True
         
         super().__init__(
@@ -26,32 +29,21 @@ class JockieMusic(commands.Bot):
     async def setup_hook(self):
         logger.info("Menghubungkan ke Lavalink...")
         
-        connected = False
-        retries = 10
-        while not connected and retries > 0:
-            try:
-                # ✅ FIX: Hapus 'secure', gunakan 'https://' di URI untuk SSL
-                node = wavelink.Node(
-                    uri=f'https://{self.config.LAVALINK_HOST}:{self.config.LAVALINK_PORT}',
-                    password=self.config.LAVALINK_PASSWORD
-                )
-                await wavelink.Pool.connect(client=self, nodes=[node])
-                connected = True
-                logger.info("Terhubung ke Lavalink!")
-            except Exception as e:
-                logger.error(f"Retry {retries}: {e}")
-                retries -= 1
-                await asyncio.sleep(5)
+        # ✅ FIX: Wavelink v4 syntax
+        node = wavelink.Node(
+            uri=f'https://{self.config.LAVALINK_HOST}:{self.config.LAVALINK_PORT}',
+            password=self.config.LAVALINK_PASSWORD
+        )
         
-        if not connected:
-            raise Exception("Gagal konek ke Lavalink!")
-            
-        await self.load_extension('cogs.music')
-        await self.load_extension('cogs.queue')
-        await self.load_extension('cogs.admin')
-        
+        try:
+            await wavelink.Pool.connect(client=self, nodes=[node])
+            logger.info("✅ Terhubung ke Lavalink!")
+        except Exception as e:
+            logger.error(f"❌ Gagal konek: {e}")
+            raise
+
     async def on_ready(self):
-        logger.info(f'{self.user} online!')
+        logger.info(f'🚀 {self.user} online!')
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
@@ -59,10 +51,12 @@ class JockieMusic(commands.Bot):
             )
         )
 
+    async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
+        logger.info(f'🎵 Lavalink ready: {payload.node.uri}')
+
 async def start_web_server(bot):
-    """Health check server"""
     async def health(request):
-        return web.Response(text="Bot is running!", status=200)
+        return web.Response(text="Bot OK!", status=200)
     
     app = web.Application()
     app.router.add_get('/', health)
@@ -70,10 +64,9 @@ async def start_web_server(bot):
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', bot.config.PORT)
     await site.start()
-    logger.info(f"Health check: port {bot.config.PORT}")
+    logger.info(f"🌐 Health check: port {bot.config.PORT}")
 
 async def main_async():
-    """Main async function"""
     bot = JockieMusic()
     
     @bot.command(name='help')
@@ -84,8 +77,8 @@ async def main_async():
             description=f"Prefix: `{bot.config.PREFIX}`",
             color=bot.config.EMBED_COLOR
         )
-        embed.add_field(name="Musik", value="`play` `pause` `resume` `skip` `stop` `np` `volume`", inline=False)
-        embed.add_field(name="Antrian", value="`queue` `shuffle` `loop` `clear`", inline=False)
+        embed.add_field(name="🎵 Musik", value="`play` `pause` `resume` `skip` `stop` `np` `volume`", inline=False)
+        embed.add_field(name="📋 Antrian", value="`queue` `shuffle` `loop` `clear`", inline=False)
         await ctx.send(embed=embed)
     
     await asyncio.gather(
@@ -98,4 +91,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
