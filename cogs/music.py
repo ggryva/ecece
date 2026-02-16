@@ -12,6 +12,16 @@ class Music(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
     
+    def get_available_node(self):
+        """Get first available node from pool"""
+        try:
+            if wavelink.Pool.nodes:
+                return list(wavelink.Pool.nodes.values())[0]
+            return None
+        except Exception as e:
+            logger.error(f"Error getting node: {e}")
+            return None
+    
     async def ensure_voice(self, ctx: commands.Context) -> bool:
         """Ensure user dan bot ada di voice channel dengan proper node checking"""
         
@@ -21,22 +31,18 @@ class Music(commands.Cog):
             return False
         
         # Cek Lavalink connection dengan retry
-        nodes = None
+        node = None
         max_retries = 3
         
         for attempt in range(max_retries):
-            try:
-                nodes = wavelink.Pool.nodes
-                if nodes:
-                    break
-                else:
-                    logger.warning(f"Node tidak tersedia, attempt {attempt + 1}/{max_retries}")
-                    await asyncio.sleep(2)
-            except Exception as e:
-                logger.error(f"Error getting nodes: {e}")
+            node = self.get_available_node()
+            if node:
+                break
+            else:
+                logger.warning(f"Node tidak tersedia, attempt {attempt + 1}/{max_retries}")
                 await asyncio.sleep(2)
         
-        if not nodes:
+        if not node:
             await ctx.send("❌ Lavalink tidak terhubung. Coba lagi nanti.")
             # Trigger reconnect
             if hasattr(self.bot, 'setup_lavalink'):
@@ -71,7 +77,7 @@ class Music(commands.Cog):
         vc: Player = ctx.voice_client
         
         # Cek node lagi sebelum play
-        if not wavelink.Pool.nodes:
+        if not self.get_available_node():
             await ctx.send("❌ Node tidak tersedia. Reconnecting...")
             return
         
@@ -133,6 +139,26 @@ class Music(commands.Cog):
         await vc.skip()
         await ctx.send("⏭️ Skip!")
     
+    @commands.command(name="queue", aliases=["q"])
+    async def queue(self, ctx: commands.Context):
+        """Show current queue"""
+        if not ctx.voice_client:
+            await ctx.send("❌ Tidak ada yang diputar!")
+            return
+        
+        vc: Player = ctx.voice_client
+        
+        if vc.queue.is_empty:
+            await ctx.send("📭 Queue kosong!")
+            return
+        
+        queue_list = []
+        for i, track in enumerate(list(vc.queue)[:10], 1):
+            queue_list.append(f"{i}. {track.title} - {track.author}")
+        
+        await ctx.send(f"📋 **Queue:**\n" + "\n".join(queue_list))
+    
+    # Event listeners untuk wavelink 3.x
     @commands.Cog.listener()
     async def on_wavelink_track_end(self, payload: wavelink.TrackEndEventPayload):
         """Auto play next track dari queue"""
@@ -143,15 +169,22 @@ class Music(commands.Cog):
         
         # Play next track jika ada di queue
         if not vc.queue.is_empty:
-            next_track = vc.queue.get()
-            await vc.play(next_track)
+            try:
+                next_track = vc.queue.get()
+                await vc.play(next_track)
+                logger.info(f"Auto-play next: {next_track.title}")
+            except Exception as e:
+                logger.error(f"Error auto-playing next track: {e}")
     
     @commands.Cog.listener()
     async def on_wavelink_track_exception(self, payload: wavelink.TrackExceptionEventPayload):
         """Handle track errors"""
         logger.error(f"Track exception: {payload.exception}")
         if payload.player and not payload.player.queue.is_empty:
-            await payload.player.skip()
+            try:
+                await payload.player.skip()
+            except Exception as e:
+                logger.error(f"Error skipping track: {e}")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Music(bot))
