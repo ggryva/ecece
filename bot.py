@@ -37,9 +37,9 @@ class JockieMusic(commands.Bot):
                 )
                 await wavelink.Pool.connect(client=self, nodes=[node])
                 connected = True
-                logger.info("✅ Terhubung ke Lavalink!")
+                logger.info("Terhubung ke Lavalink!")
             except Exception as e:
-                logger.error(f"❌ Retry {retries}: {e}")
+                logger.error(f"Retry {retries}: {e}")
                 retries -= 1
                 await asyncio.sleep(5)
         
@@ -51,7 +51,7 @@ class JockieMusic(commands.Bot):
         await self.load_extension('cogs.admin')
         
     async def on_ready(self):
-        logger.info(f'🚀 {self.user} online!')
+        logger.info(f'{self.user} online!')
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.listening,
@@ -60,14 +60,12 @@ class JockieMusic(commands.Bot):
         )
         
     async def on_wavelink_node_ready(self, payload: wavelink.NodeReadyEventPayload):
-        logger.info(f'🎵 Lavalink ready: {payload.node.uri}')
-
-# ==================== FIX UTAMA ====================
+        logger.info(f'Lavalink ready: {payload.node.uri}')
 
 async def start_web_server(bot):
-    """Health check server - async properly"""
+    """Health check server"""
     async def health(request):
-        return web.Response(text="🎵 Bot is running!", status=200)
+        return web.Response(text="Bot is running!", status=200)
     
     app = web.Application()
     app.router.add_get('/', health)
@@ -75,7 +73,7 @@ async def start_web_server(bot):
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', bot.config.PORT)
     await site.start()
-    logger.info(f"🌐 Health check: port {bot.config.PORT}")
+    logger.info(f"Health check: port {bot.config.PORT}")
 
 async def main_async():
     """Main async function"""
@@ -89,13 +87,20 @@ async def main_async():
             description=f"Prefix: `{bot.config.PREFIX}`",
             color=bot.config.EMBED_COLOR
         )
-        embed.add_field(name="🎵 Musik", value="`play` `pause` `resume` `skip` `stop` `np` `volume`", inline=False)
-        embed.add_field(name="📋 Antrian", value="`queue` `shuffle` `loop` `clear`", inline=False)
-        embed.add_field(name="ℹ️ Info", value="`stats` `disconnect`", inline=False)
+        embed.add_field(name="Musik", value="`play` `pause` `resume` `skip` `stop` `np` `volume`", inline=False)
+        embed.add_field(name="Antrian", value="`queue` `shuffle` `loop` `clear`", inline=False)
+        embed.add_field(name="Info", value="`stats` `disconnect`", inline=False)
         await ctx.send(embed=embed)
     
-    # ✅ FIX: Jalankan web server dan bot secara parallel
+    # Jalankan web server dan bot secara parallel
     await asyncio.gather(
         start_web_server(bot),
-        bot.start(bot.config.TOKEN)  # Gunakan start(), bukan run()
-... (9 lines left)
+        bot.start(bot.config.TOKEN)
+    )
+
+def main():
+    """Entry point"""
+    asyncio.run(main_async())
+
+if __name__ == "__main__":
+    main()
